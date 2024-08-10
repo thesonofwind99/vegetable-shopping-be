@@ -1,0 +1,32 @@
+version: '1.0'
+
+services:
+  mysqldb:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_DATABASE: vegetable_store
+    ports:
+      - "3307:3306"
+    container_name: mysql_m2m
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-padmin123" ]
+      interval: 5s
+      retries: 10
+      timeout: 10s
+
+  app:
+    build: .
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/vegetable_store
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+    container_name: vegetable-shopping-be
