@@ -22,5 +22,6 @@ public interface UserService {
 
     AccountRequestWithRole saveUserWithRole(AccountRequestWithRole accountRequest);
 
-    String forgotPassword(String email) throws MessagingException; ;
+    String forgotPassword(String email) throws MessagingException;
+
 }
