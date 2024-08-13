@@ -136,19 +136,19 @@ public class UserServiceImpl implements UserService {
     @Override
     public String forgotPassword(String email) throws MessagingException {
 
-        if (!userRepository.existsByEmail(email)) {
-            throw new ResourceNotFoundException("User", "email", email);
-        }
-        User user = userRepository.findByEmail(email);
-        String newPassword = RandomStringUtils.randomAlphanumeric(8);
-        user.setPassword(applicationSecureConfig.passwordEncoder().encode(newPassword));
-        userRepository.save(user);
-        MailInfo mailInfo = new MailInfo();
-        mailInfo.setTo("anhbhps32085@fpt.edu.vn");
-        mailInfo.setSubject("Password Reset");
-        mailInfo.setBody(newPassword);
-        emailSender.sendEmail(mailInfo);
-        return newPassword;
+//        if (!userRepository.existsByEmail(email)) {
+//            throw new ResourceNotFoundException("User", "email", email);
+//        }
+//        User user = userRepository.findByEmail(email);
+//        String newPassword = RandomStringUtils.randomAlphanumeric(8);
+//        user.setPassword(applicationSecureConfig.passwordEncoder().encode(newPassword));
+//        userRepository.save(user);
+//        MailInfo mailInfo = new MailInfo();
+//        mailInfo.setTo("anhbhps32085@fpt.edu.vn");
+//        mailInfo.setSubject("Password Reset");
+//        mailInfo.setBody(newPassword);
+//        emailSender.sendEmail(mailInfo);
+        return null;
     }
 
 
