@@ -8,13 +8,16 @@ import com.vegetableshoppingbe.dto.response.ProductPhotoResponse;
 import com.vegetableshoppingbe.entity.Product;
 import com.vegetableshoppingbe.entity.ProductPhoto;
 import com.vegetableshoppingbe.exception.ResourceNotFoundException;
+import com.vegetableshoppingbe.exception.SystemErrorException;
 import com.vegetableshoppingbe.repository.ProductPhotoRepository;
 import com.vegetableshoppingbe.repository.ProductRepository;
+import com.vegetableshoppingbe.service.ImgBBService;
 import com.vegetableshoppingbe.service.ProductPhotoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +28,7 @@ public class ProductPhotoServiceImpl implements ProductPhotoService {
     private final ProductPhotoRepository productPhotoRepository;
 
     private final ProductRepository productRepository;
-    private final S3ServiceImpl s3ServiceImpl;
+    private final ImgBBService imgBBService;
 
 //    private final Drive drive;
 
@@ -35,14 +38,17 @@ public class ProductPhotoServiceImpl implements ProductPhotoService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("ProductPhoto", "ProductId",
                         "" + request.getProductId()));
-        String imageUrl;
-//        try {
-//            imageUrl = UploadImageFile.uploadImageFile(drive, file);
-//        } catch (IOException e) {
-//            throw new UploadFileException("Error upload image to drive");
-//        }
+        //Upload image to ImgBB
+        String imgBBFilePath;
+        try {
+            imgBBFilePath = imgBBService.uploadToImgBB(file);
+            System.out.println(imgBBFilePath);
+//            Files.deleteIfExists(fileConvert.toPath());
+        } catch (IOException | SystemErrorException e) {
+            throw new SystemErrorException("Error uploading to ImgBB");
+        }
         ProductPhoto productPhoto = ProductPhotoConverter.toProductPhoto(request);
-//        productPhoto.setPhotoUrl(imageUrl);
+        productPhoto.setPhotoUrl(imgBBFilePath);
         productPhotoRepository.save(productPhoto);
         request.setPhotoUrl(productPhoto.getPhotoUrl());
         return request;
@@ -54,7 +60,6 @@ public class ProductPhotoServiceImpl implements ProductPhotoService {
         List<ProductPhotoResponse> productPhotoResponses = new ArrayList<>();
         for (ProductPhoto productPhoto : productPhotos) {
             ProductPhotoResponse productPhotoResponse = ProductPhotoConverter.toProductPhotoResponse(productPhoto);
-            productPhotoResponse.setPhotoUrl(s3ServiceImpl.generatePresignedUrl(productPhoto.getPhotoUrl()));
             productPhotoResponses.add(productPhotoResponse);
         }
         return productPhotoResponses;

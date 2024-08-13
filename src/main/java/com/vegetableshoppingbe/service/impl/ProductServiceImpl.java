@@ -10,6 +10,7 @@ import com.vegetableshoppingbe.exception.ResourceNotFoundException;
 import com.vegetableshoppingbe.exception.SystemErrorException;
 import com.vegetableshoppingbe.repository.CategoryRepository;
 import com.vegetableshoppingbe.repository.ProductRepository;
+import com.vegetableshoppingbe.service.ImgBBService;
 import com.vegetableshoppingbe.service.ProductService;
 import com.vegetableshoppingbe.service.S3Service;
 import com.vegetableshoppingbe.utils.FileUtil;
@@ -32,7 +33,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
-    private final S3Service s3Service;
+    private final ImgBBService imgBBService;
 
     private final ModelMapper modelMapper;
 
@@ -51,7 +52,6 @@ public class ProductServiceImpl implements ProductService {
 
         return products.map(product -> {
             ProductResponse productResponse = ProductConverter.toProductResponse(product);
-            productResponse.setPhoto(s3Service.generatePresignedUrl(productResponse.getPhoto()));
             return productResponse;
         });
     }
@@ -63,7 +63,7 @@ public class ProductServiceImpl implements ProductService {
                 .map(featureProduct -> ProductResponse.builder()
                         .productId(featureProduct.getProductId())
                         .productName(featureProduct.getProductName())
-                        .photo(s3Service.generatePresignedUrl(featureProduct.getPhoto()))
+                        .photo(featureProduct.getPhoto())
                         .price(featureProduct.getPrice())
                         .build()).toList();
     }
@@ -74,18 +74,18 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "categoryId",
                         "" + productRequest.getCategoryId()));
 
-        // upload image to S3
-        String s3FilePath;
+        // upload image to ImgBB
+        String imgBBFilePath;
         try {
-            File fileConvert = FileUtil.convertMultiPartToFile(file);
-            s3FilePath = s3Service.uploadFileToS3(fileConvert);
-            Files.deleteIfExists(fileConvert.toPath());
+            imgBBFilePath = imgBBService.uploadToImgBB(file);
+            System.out.println(imgBBFilePath);
+//            Files.deleteIfExists(fileConvert.toPath());
         } catch (SystemErrorException | IOException e) {
-            throw new SystemErrorException("Error uploading file to S3");
+            throw new SystemErrorException("Error uploading file to ImgBB");
         }
 
         Product product = ProductConverter.toProduct(productRequest);
-        product.setPhoto(s3FilePath);
+        product.setPhoto(imgBBFilePath);
         productRepository.save(product);
 
         return product.getProductId();
@@ -105,7 +105,6 @@ public class ProductServiceImpl implements ProductService {
         }
         return products.map(product -> {
             ProductResponse productResponse = ProductConverter.toProductResponse(product);
-            productResponse.setPhoto(s3Service.generatePresignedUrl(productResponse.getPhoto()));
             return productResponse;
         });
     }
@@ -134,12 +133,14 @@ public class ProductServiceImpl implements ProductService {
         productRequest.setPhoto(product.getPhoto());
         product = ProductConverter.toProduct(productRequest);
 
+        // upload image to ImgBB
+        String imgBBFilePath;
         if (file != null && !file.isEmpty()) {
             try {
-                File fileConverted = FileUtil.convertMultiPartToFile(file);
-                String s3FilePath = s3Service.uploadFileToS3(fileConverted);
-                Files.deleteIfExists(fileConverted.toPath());
-                product.setPhoto(s3FilePath);
+                imgBBFilePath = imgBBService.uploadToImgBB(file);
+                System.out.println(imgBBFilePath);
+            //  Files.deleteIfExists(fileConvert.toPath());
+                product.setPhoto(imgBBFilePath);
             } catch (IOException | SystemErrorException e) {
                 throw new SystemErrorException("Error uploading file to S3");
             }
@@ -157,7 +158,6 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", "" + id));
         ProductResponse productResponse = ProductConverter.toProductResponse(product);
-        productResponse.setPhoto(s3Service.generatePresignedUrl(product.getPhoto()));
         return productResponse;
     }
 
