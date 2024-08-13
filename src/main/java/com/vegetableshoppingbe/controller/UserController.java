@@ -78,7 +78,7 @@ public class UserController {
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String email) throws MessagingException {
 
-
+        System.out.println("hello");
         User user = userRepository.findByEmail(email);
         String newPassword = RandomStringUtils.randomAlphanumeric(8);
         user.setPassword(applicationSecureConfig.passwordEncoder().encode(newPassword));
@@ -89,6 +89,7 @@ public class UserController {
         String text = "New your password: " + newPassword;
 
         // Gửi email
+
         emailService.sendEmail(email, subject, text);
         return ResponseEntity.ok().body(userServiceImpl.forgotPassword(email));
     }
