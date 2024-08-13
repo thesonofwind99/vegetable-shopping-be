@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 
+import com.vegetableshoppingbe.service.ImgBBService;
 import com.vegetableshoppingbe.service.S3Service;
 import com.vegetableshoppingbe.utils.FileUtil;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class BlogServiceImpl implements BlogService {
 
     private final BlogRepository blogRepository;
 
-    private final S3Service s3Service;
+    private final ImgBBService imgBBService;
 
     @Override
     public Page<BlogResponse> getAll(Integer pageNo, String keyword, Boolean active, Integer categoryId, Integer blogId, Integer pageSize) {
@@ -44,7 +45,6 @@ public class BlogServiceImpl implements BlogService {
         Page<Blog> blogPage = this.blogRepository.findAllBlogs(active, keyword, categoryId, blogId, pageable);
         return blogPage.map(blog -> {
             BlogResponse blogResponse = BlogConverter.toBlogResponse(blog);
-            blogResponse.setBlogImage(s3Service.generatePresignedUrl(blogResponse.getBlogImage()));
             return blogResponse;
         });
     }
@@ -56,7 +56,6 @@ public class BlogServiceImpl implements BlogService {
         Page<Blog> blogPage = blogRepository.findByCategoryId(categoryId, blogId, pageable);
         return blogPage.map(blog -> {
             BlogResponse blogResponse = BlogConverter.toBlogResponse(blog);
-            blogResponse.setBlogImage(s3Service.generatePresignedUrl(blogResponse.getBlogImage()));
             return blogResponse;
         });
     }
@@ -66,18 +65,18 @@ public class BlogServiceImpl implements BlogService {
         Category category = categoryRepository.findById(blogRequest.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "categoryId",
                         "" + blogRequest.getCategoryId()));
-        String s3FilePath;
+        String imgBBFilePath;
         try {
-            File fileConvert = FileUtil.convertMultiPartToFile(file);
-            s3FilePath = s3Service.uploadFileToS3(fileConvert);
-            Files.deleteIfExists(fileConvert.toPath());
+            imgBBFilePath = imgBBService.uploadToImgBB(file);
+            System.out.println(imgBBFilePath);
+//            Files.deleteIfExists(fileConvert.toPath());
         } catch (IOException | SystemErrorException e) {
-            throw new SystemErrorException("Error uploading to S3");
+            throw new SystemErrorException("Error uploading to ImgBB");
         }
         Blog blog = BlogConverter.toBlog(blogRequest);
-        blog.setImage(s3FilePath);
+        blog.setImage(imgBBFilePath);
         blogRepository.save(blog);
-        blogRequest.setBlogImage(s3FilePath);
+        blogRequest.setBlogImage(imgBBFilePath);
         return blogRequest;
     }
 
@@ -92,12 +91,12 @@ public class BlogServiceImpl implements BlogService {
         blog = BlogConverter.toBlog(blogRequest);
         if (file != null && !file.isEmpty()) {
             try {
-               File fileConverter = FileUtil.convertMultiPartToFile(file);
-               String s3FilePath = s3Service.uploadFileToS3(fileConverter);
-               Files.deleteIfExists(fileConverter.toPath());
-               blog.setImage(s3FilePath);
+               String imgBBFilePath = imgBBService.uploadToImgBB(file);
+                System.out.println(imgBBFilePath);
+//               Files.deleteIfExists(fileConverter.toPath());
+               blog.setImage(imgBBFilePath);
             } catch (IOException | SystemErrorException e) {
-                throw new SystemErrorException("Error uploading file to S3");
+                throw new SystemErrorException("Error uploading file to ImgBB");
             }
         }
         blog.setId(id);
@@ -111,7 +110,6 @@ public class BlogServiceImpl implements BlogService {
         Blog blog = blogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Blog", "id", "" + id));
         BlogResponse blogResponse = BlogConverter.toBlogResponse(blog);
-        blogResponse.setBlogImage(s3Service.generatePresignedUrl(blogResponse.getBlogImage()));
         return blogResponse;
     }
 
@@ -120,7 +118,6 @@ public class BlogServiceImpl implements BlogService {
         List<Blog> blogs = blogRepository.getThreeBlog();
         return blogs.stream().map(blog -> {
             BlogResponse blogResponse = BlogConverter.toBlogResponse(blog);
-            blogResponse.setBlogImage(s3Service.generatePresignedUrl(blogResponse.getBlogImage()));
             return blogResponse;
         }).toList();
     }
